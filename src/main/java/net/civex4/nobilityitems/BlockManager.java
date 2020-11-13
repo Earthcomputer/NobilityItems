@@ -1,5 +1,6 @@
 package net.civex4.nobilityitems;
 
+import net.civex4.nobilityitems.impl.block.ChunkDataListener;
 import org.bukkit.Bukkit;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
@@ -33,6 +34,8 @@ class BlockManager {
                 blocks.put(internalName, block);
             }
         }
+
+        ChunkDataListener.recomputeCache();
     }
 
     static boolean makeBlock(String internalName, BlockData blockData, NobilityItem item) {
@@ -50,6 +53,7 @@ class BlockManager {
             blockSection.set("hasItem", true);
         }
 
+        ChunkDataListener.recomputeCache();
         save();
 
         return true;
