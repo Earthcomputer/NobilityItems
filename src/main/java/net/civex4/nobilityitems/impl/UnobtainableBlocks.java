@@ -1,8 +1,11 @@
-package net.civex4.nobilityitems;
+package net.civex4.nobilityitems.impl;
 
 import com.google.common.collect.ImmutableMap;
+import net.civex4.nobilityitems.NobilityItems;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Registry;
+import org.bukkit.World;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Bisected;
 import org.bukkit.block.data.BlockData;
@@ -24,16 +27,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-class UnobtainableBlocks {
-    static boolean isUnobtainable(BlockData block) {
+public class UnobtainableBlocks {
+    public static boolean isUnobtainable(BlockData block) {
         return unobtainableBlocks.contains(block);
     }
 
-    static Iterable<BlockData> getUnobtainableBlocks() {
+    public static Iterable<BlockData> getUnobtainableBlocks() {
         return unobtainableBlocks;
     }
 
-    static Map<String, List<?>> getAllProperties(Material material) {
+    public static Map<String, List<?>> getAllProperties(Material material) {
         return allProperties.get(material);
     }
 
@@ -83,9 +86,9 @@ class UnobtainableBlocks {
                     for (Wall.Height southHeight : Wall.Height.values()) {
                         for (Wall.Height westHeight : Wall.Height.values()) {
                             for (Wall.Height eastHeight : Wall.Height.values()) {
-                                boolean straight = (northHeight == Wall.Height.NONE && southHeight == Wall.Height.NONE && westHeight != Wall.Height.NONE && eastHeight != Wall.Height.NONE)
-                                        || (northHeight != Wall.Height.NONE && southHeight != Wall.Height.NONE && westHeight == Wall.Height.NONE && eastHeight == Wall.Height.NONE);
-                                if (!straight) {
+                                boolean unobtainable = northHeight != southHeight || westHeight != eastHeight
+                                        || (northHeight == Wall.Height.NONE && westHeight == Wall.Height.NONE);
+                                if (unobtainable) {
                                     for (boolean waterlogged : BOOLEANS) {
                                         Wall wall = (Wall) material.createBlockData();
                                         wall.setHeight(BlockFace.NORTH, northHeight);
@@ -245,6 +248,14 @@ class UnobtainableBlocks {
                     unobtainableBlocks.add(bamboo);
                 }
             }
+        }
+    }
+
+    public static BlockData overrideNeighborPlacement(World world, Location location, BlockData oldData, BlockData newData) {
+        if (NobilityItems.getBlock(oldData) != null) {
+            return oldData;
+        } else {
+            return null;
         }
     }
 }

@@ -1,5 +1,6 @@
 package net.civex4.nobilityitems;
 
+import net.civex4.nobilityitems.impl.UnobtainableBlocks;
 import org.bukkit.Bukkit;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;

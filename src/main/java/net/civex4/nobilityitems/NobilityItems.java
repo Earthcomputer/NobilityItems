@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.comphenix.protocol.ProtocolManager;
 import net.civex4.nobilityitems.impl.PackServer;
+import net.civex4.nobilityitems.impl.Patches;
 import net.civex4.nobilityitems.impl.PlayerListener;
 import net.civex4.nobilityitems.impl.Protocol;
 import org.bukkit.block.data.BlockData;
@@ -20,6 +21,8 @@ public class NobilityItems extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+
+        Patches.apply();
 
         Protocol.init(this);
 

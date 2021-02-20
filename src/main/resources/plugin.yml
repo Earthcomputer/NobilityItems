@@ -2,6 +2,9 @@ name: NobilityItems
 version: ${project.version}
 main: net.civex4.nobilityitems.NobilityItems
 api-version: 1.16
+depend:
+  - ProtocolLib
+  - NobilityPatch
 commands:
   nobilityitems:
     description: NobilityItems command
