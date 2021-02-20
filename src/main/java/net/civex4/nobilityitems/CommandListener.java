@@ -57,7 +57,7 @@ public class CommandListener implements CommandExecutor {
                 + ChatColor.GREEN + "creates a NobilityBlock");
             sender.sendMessage(ChatColor.YELLOW + "/nobilityitems setblock <x> <y> <z> <name> "
                 + ChatColor.GREEN + "sets a NobilityBlock in the world");
-            sender.sendMessage(ChatColor.YELLOW + "/nobilityitems reload"
+            sender.sendMessage(ChatColor.YELLOW + "/nobilityitems reload "
                 + ChatColor.GREEN + "reloads nobility block and item config from the yml files");
             
             return true;
@@ -256,7 +256,7 @@ public class CommandListener implements CommandExecutor {
                 return true;
             }
 
-            boolean hasItem = args.length > 3 && Boolean.parseBoolean(args[3]);
+            boolean hasItem = args.length <= 3 || Boolean.parseBoolean(args[3]);
             NobilityItem item = null;
 
             if (hasItem) {
