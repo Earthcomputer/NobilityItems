@@ -5,6 +5,7 @@ import java.util.Objects;
 
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BlockDataMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 
 /**
@@ -15,7 +16,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 public class NobilityItem {
     private final String internalName;
     private final String displayName;
-    private final Material material;
+    private Material material;
     private final String model;
     private final int customModelData;
     private final List<String> lore;
@@ -35,6 +36,12 @@ public class NobilityItem {
 
     void setBlock(NobilityBlock block) {
         this.block = block;
+        Material blockMaterial = block.getBlockData().getMaterial();
+        if (blockMaterial.isItem()) {
+            this.material = blockMaterial;
+        } else {
+            this.material = Material.STRUCTURE_VOID;
+        }
     }
 
     public boolean hasLore() {
@@ -94,6 +101,8 @@ public class NobilityItem {
             meta.setCustomModelData(customModelData);
         if (lore != null)
             meta.setLore(lore);
+        if (block != null && material == block.getBlockData().getMaterial() && meta instanceof BlockDataMeta)
+            ((BlockDataMeta) meta).setBlockData(block.getBlockData());
         item.setItemMeta(meta);
         return item;
     }

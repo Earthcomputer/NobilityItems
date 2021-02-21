@@ -9,6 +9,7 @@ import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.BukkitConverters;
 import com.comphenix.protocol.wrappers.WrappedBlockData;
+import net.bytebuddy.jar.asm.ClassVisitor;
 import net.bytebuddy.jar.asm.Label;
 import net.bytebuddy.jar.asm.MethodVisitor;
 import net.bytebuddy.jar.asm.Opcodes;
@@ -21,9 +22,11 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.inventory.ItemStack;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.List;
 
 public class Patches {
     private static final Class<?> blockData = MinecraftReflection.getMinecraftClass("BlockBase$BlockData");
@@ -54,10 +57,12 @@ public class Patches {
     private static final EquivalentConverter<World> WORLD_CONVERTER = BukkitConverters.getWorldConverter();
     private static final EquivalentConverter<BlockPosition> BLOCKPOS_CONVERTER = BlockPosition.getConverter();
     private static final EquivalentConverter<WrappedBlockData> BLOCK_DATA_CONVERTER = BukkitConverters.getWrappedBlockDataConverter();
+    private static final EquivalentConverter<ItemStack> ITEM_STACK_CONVERTER = BukkitConverters.getItemStackConverter();
 
     public static void apply() {
         addNeighborPlacementCallback();
         addWaterloggedCallback();
+        addBlockDropCallback();
     }
 
     private static void addNeighborPlacementCallback() {
@@ -130,6 +135,53 @@ public class Patches {
         });
     }
 
+    private static void addBlockDropCallback() {
+        CallbackKey<BlockDropsDelegate> blockDropsCallback = NobilityPatch.registerCallback(BlockDropsDelegate.class, (drops, state) -> {
+            BlockData blockData = (BlockData) craftBlockData_fromData.invoke(null, state);
+            NobilityBlock nobilityBlock = NobilityItems.getBlock(blockData);
+            if (nobilityBlock != null) {
+                drops.clear();
+                if (nobilityBlock.hasItem()) {
+                    ItemStack stack = nobilityBlock.getItem().getItemStack(1);
+                    drops.add(ITEM_STACK_CONVERTER.getGeneric(stack));
+                }
+            }
+        });
+
+        Class<?> lootTableInfoBuilder = MinecraftReflection.getMinecraftClass("LootTableInfo$Builder");
+        NobilityPatch.transform(MinecraftReflection.getBlockClass(), visitor -> new ClassVisitor(Opcodes.ASM9, visitor) {
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+                Type methodType = Type.getMethodType(descriptor);
+                Type[] argumentTypes = methodType.getArgumentTypes();
+                if ((access & Opcodes.ACC_STATIC) != 0 && "Ljava/util/List;".equals(methodType.getReturnType().getDescriptor()) && argumentTypes.length != 0 && Type.getDescriptor(iBlockData).equals(argumentTypes[0].getDescriptor())) {
+                    return new MethodVisitor(Opcodes.ASM9, cv.visitMethod(access, name, descriptor, signature, exceptions)) {
+                        private boolean isLootMethod = false;
+
+                        @Override
+                        public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
+                            if ("<init>".equals(name) && Type.getInternalName(lootTableInfoBuilder).equals(owner)) {
+                                isLootMethod = true;
+                            }
+                            mv.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
+                        }
+
+                        @Override
+                        public void visitInsn(int opcode) {
+                            if (opcode == Opcodes.ARETURN && isLootMethod) {
+                                mv.visitInsn(Opcodes.DUP); // drops
+                                mv.visitVarInsn(Opcodes.ALOAD, 0); // state
+                                NobilityPatch.invokeCallback(mv, blockDropsCallback);
+                            }
+                            mv.visitInsn(opcode);
+                        }
+                    };
+                }
+                return cv.visitMethod(access, name, descriptor, signature, exceptions);
+            }
+        });
+    }
+
     @FunctionalInterface
     public interface OverrideNeighborPlacementDelegate {
         @SuppressWarnings("unused")
@@ -140,5 +192,11 @@ public class Patches {
     public interface WaterloggedDelegate {
         @SuppressWarnings("unused")
         Object /*Fluid*/ getFluid(Object /*BlockBase$BlockData*/ _this);
+    }
+
+    @FunctionalInterface
+    public interface BlockDropsDelegate {
+        @SuppressWarnings("unused")
+        void editBlockDrops(List<Object /*ItemStack*/> drops, Object /*IBlockData*/ state);
     }
 }

@@ -270,7 +270,7 @@ public class CommandListener implements CommandExecutor {
                 }
 
                 if (!ItemManager.makeItem(internalName, stack)) {
-                    sender.sendMessage(ChatColor.RED + "Unable to create item! Is that name already in use?");
+                    sender.sendMessage(ChatColor.RED + "Unable to create item! Did that item not have a name, or is that name already in use?");
                     return true;
                 }
 

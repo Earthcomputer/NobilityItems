@@ -44,7 +44,7 @@
         <dependency>
             <groupId>com.github.nobility-suite</groupId>
             <artifactId>NobilityPatch</artifactId>
-            <version>06b58f85</version>
+            <version>c3e4dc62</version>
         </dependency>
     </dependencies>
 
