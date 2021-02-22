@@ -33,6 +33,8 @@ class ItemManager {
     private static File customModelDataFile;
 
     static void init(File itemFolder, File tagsFile) {
+        boolean errors = false;
+
         Bukkit.getLogger().info("Loading tags...");
         tags = new HashMap<>();
 
@@ -45,6 +47,7 @@ class ItemManager {
         } catch (IllegalArgumentException e) {
             Bukkit.getLogger().severe("Failed to load tags.yml!");
             e.printStackTrace();
+            errors = true;
         }
 
         for (String tag : tagsConfig.getKeys(false)) {
@@ -111,6 +114,7 @@ class ItemManager {
                 } catch (IllegalArgumentException e) {
                     Bukkit.getLogger().severe("Failed to load " + file.getName() + "!");
                     e.printStackTrace();
+                    errors = true;
                 }
             }
         }
@@ -176,6 +180,7 @@ class ItemManager {
                 }
 
                 if (cont) {
+                    errors = true;
                     Bukkit.getLogger().severe("Unable to load " + itemConfig.getCurrentPath());
                     continue;
                 }
@@ -196,7 +201,11 @@ class ItemManager {
 
         Bukkit.getLogger().info("Items Loaded!");
 
-        save();
+        if (!errors) {
+            save();
+        } else {
+            Bukkit.getLogger().log(Level.SEVERE, "Errors in nobility item configs. Do not try to create any more items or it will overwrite the existing config!");
+        }
     }
 
     static boolean makeItem(String internalName, ItemStack item) {
