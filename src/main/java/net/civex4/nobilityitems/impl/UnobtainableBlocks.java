@@ -1,11 +1,8 @@
 package net.civex4.nobilityitems.impl;
 
 import com.google.common.collect.ImmutableMap;
-import net.civex4.nobilityitems.NobilityItems;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Registry;
-import org.bukkit.World;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Bisected;
 import org.bukkit.block.data.BlockData;
@@ -248,14 +245,6 @@ public class UnobtainableBlocks {
                     unobtainableBlocks.add(bamboo);
                 }
             }
-        }
-    }
-
-    public static BlockData overrideNeighborPlacement(World world, Location location, BlockData oldData, BlockData newData) {
-        if (NobilityItems.getBlock(oldData) != null) {
-            return oldData;
-        } else {
-            return null;
         }
     }
 }

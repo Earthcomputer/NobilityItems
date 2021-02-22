@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.comphenix.protocol.ProtocolManager;
+import net.civex4.nobilityitems.impl.BlockManager;
 import net.civex4.nobilityitems.impl.PackServer;
 import net.civex4.nobilityitems.impl.Patches;
 import net.civex4.nobilityitems.impl.PlayerListener;
@@ -42,7 +43,7 @@ public class NobilityItems extends JavaPlugin {
 
     void reload() {
         ItemManager.init(new File(getDataFolder(), "items"), new File(getDataFolder(), "tags.yml"));
-        BlockManager.init();
+        BlockManager.init(this);
     }
 
     @Override

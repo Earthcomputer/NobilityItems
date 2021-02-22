@@ -6,7 +6,6 @@ import com.comphenix.protocol.reflect.accessors.Accessors;
 import com.comphenix.protocol.reflect.accessors.MethodAccessor;
 import com.comphenix.protocol.reflect.fuzzy.FuzzyMethodContract;
 import com.comphenix.protocol.utility.MinecraftReflection;
-import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.BukkitConverters;
 import com.comphenix.protocol.wrappers.WrappedBlockData;
 import net.bytebuddy.jar.asm.ClassVisitor;
@@ -18,9 +17,7 @@ import net.civex4.nobilityitems.NobilityBlock;
 import net.civex4.nobilityitems.NobilityItems;
 import net.civex4.nobilitypatch.CallbackKey;
 import net.civex4.nobilitypatch.NobilityPatch;
-import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.inventory.ItemStack;
 
@@ -40,7 +37,8 @@ public class Patches {
     private static final Class<?> craftBlockData = MinecraftReflection.getCraftBukkitClass("block.data.CraftBlockData");
     private static final MethodAccessor craftBlockData_fromData = Accessors.getMethodAccessor(FuzzyReflection.fromClass(craftBlockData).getMethodByParameters("fromData", iBlockData));
     private static final Class<?> chunkProviderServer = MinecraftReflection.getMinecraftClass("ChunkProviderServer");
-    private static final MethodAccessor getChunkProviderServer = Accessors.getMethodAccessor(FuzzyReflection.fromClass(MinecraftReflection.getWorldServerClass()).getMethod(FuzzyMethodContract.newBuilder()
+    private static final Class<?> worldServer = MinecraftReflection.getWorldServerClass();
+    private static final MethodAccessor getChunkProviderServer = Accessors.getMethodAccessor(FuzzyReflection.fromClass(worldServer).getMethod(FuzzyMethodContract.newBuilder()
             .returnTypeExact(chunkProviderServer)
             .parameterCount(0)
             .build()));
@@ -54,8 +52,6 @@ public class Patches {
     private static final MethodAccessor getFluid = Accessors.getMethodAccessor(getFluidMethod);
 
 
-    private static final EquivalentConverter<World> WORLD_CONVERTER = BukkitConverters.getWorldConverter();
-    private static final EquivalentConverter<BlockPosition> BLOCKPOS_CONVERTER = BlockPosition.getConverter();
     private static final EquivalentConverter<WrappedBlockData> BLOCK_DATA_CONVERTER = BukkitConverters.getWrappedBlockDataConverter();
     private static final EquivalentConverter<ItemStack> ITEM_STACK_CONVERTER = BukkitConverters.getItemStackConverter();
 
@@ -67,20 +63,23 @@ public class Patches {
 
     private static void addNeighborPlacementCallback() {
         CallbackKey<OverrideNeighborPlacementDelegate> neighborPlacementCallback = NobilityPatch.registerCallback(OverrideNeighborPlacementDelegate.class, (state, _this, world, pos) -> {
-            BlockData newData = (BlockData) craftBlockData_fromData.invoke(null, state);
-            BlockData oldData = (BlockData) craftBlockData_fromData.invoke(null, blockData_asIBlockData.invoke(_this));
-            World bukkitWorld = WORLD_CONVERTER.getSpecific(world);
-            BlockPosition wrappedPos = BLOCKPOS_CONVERTER.getSpecific(pos);
-            BlockData result = UnobtainableBlocks.overrideNeighborPlacement(bukkitWorld, new Location(null, wrappedPos.getX(), wrappedPos.getY(), wrappedPos.getZ()), oldData, newData);
-            if (result == null) {
+            if (!BlockManager.isNmsNobilityBlockCache(_this, () -> {
+                Object oldState = blockData_asIBlockData.invoke(_this);
+                BlockData oldData = (BlockData) craftBlockData_fromData.invoke(null, oldState);
+                return NobilityItems.getBlock(oldData) != null;
+            })) {
                 return state;
-            } else {
-                if (!result.matches(newData)) {
+            }
+            Object oldState = blockData_asIBlockData.invoke(_this);
+            if (worldServer.isInstance(world)) {
+                BlockData newData = (BlockData) craftBlockData_fromData.invoke(null, state);
+                BlockData oldData = (BlockData) craftBlockData_fromData.invoke(null, oldState);
+                if (!oldData.matches(newData)) {
                     Object chunkProviderServer = getChunkProviderServer.invoke(world);
                     flagDirty.invoke(chunkProviderServer, pos);
                 }
-                return BLOCK_DATA_CONVERTER.getGeneric(WrappedBlockData.createData(result));
             }
+            return oldState;
         });
 
         Class<?> enumDirection = MinecraftReflection.getMinecraftClass("EnumDirection");

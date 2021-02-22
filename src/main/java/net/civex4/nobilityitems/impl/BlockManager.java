@@ -1,5 +1,8 @@
-package net.civex4.nobilityitems;
+package net.civex4.nobilityitems.impl;
 
+import net.civex4.nobilityitems.NobilityBlock;
+import net.civex4.nobilityitems.NobilityItem;
+import net.civex4.nobilityitems.NobilityItems;
 import org.bukkit.Bukkit;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
@@ -9,19 +12,22 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 
-class BlockManager {
+public class BlockManager {
     private static Map<String, NobilityBlock> blocks;
     private static List<NobilityBlock> blockList;
     private static File file;
     private static FileConfiguration blocksConfig;
+    private static Map<Object, Boolean> isNmsNobilityBlockCache = new IdentityHashMap<>();
 
-    static void init() {
-        NobilityItems.getInstance().saveResource("blocks.yml", false);
-        file = new File(NobilityItems.getInstance().getDataFolder(), "blocks.yml");
+    public static void init(NobilityItems nobilityItems) {
+        nobilityItems.saveResource("blocks.yml", false);
+        file = new File(nobilityItems.getDataFolder(), "blocks.yml");
         blocksConfig = YamlConfiguration.loadConfiguration(file);
 
         blocks = new LinkedHashMap<>();
@@ -33,9 +39,10 @@ class BlockManager {
                 blocks.put(internalName, block);
             }
         }
+        isNmsNobilityBlockCache = new IdentityHashMap<>();
     }
 
-    static boolean makeBlock(String internalName, BlockData blockData, NobilityItem item) {
+    public static boolean makeBlock(String internalName, BlockData blockData, NobilityItem item) {
         if (blocks.containsKey(internalName)) {
             return false;
         }
@@ -55,18 +62,18 @@ class BlockManager {
         return true;
     }
 
-    static List<NobilityBlock> getBlocks() {
+    public static List<NobilityBlock> getBlocks() {
         if (blockList == null) {
             blockList = new ArrayList<>(blocks.values());
         }
         return blockList;
     }
 
-    static NobilityBlock getNullableBlock(String internalName) {
+    public static NobilityBlock getNullableBlock(String internalName) {
         return blocks.get(internalName);
     }
 
-    static NobilityBlock getBlock(String internalName) {
+    public static NobilityBlock getBlock(String internalName) {
         NobilityBlock block = blocks.get(internalName);
 
         if (block == null) {
@@ -76,7 +83,7 @@ class BlockManager {
         return block;
     }
 
-    static NobilityBlock getBlock(BlockData blockData) {
+    public static NobilityBlock getBlock(BlockData blockData) {
         for (NobilityBlock block : getBlocks()) {
             if (block.equalsBlock(blockData)) {
                 return block;
@@ -84,6 +91,10 @@ class BlockManager {
         }
 
         return null;
+    }
+
+    static boolean isNmsNobilityBlockCache(Object blockState, BooleanSupplier nmsFunction) {
+        return isNmsNobilityBlockCache.computeIfAbsent(blockState, k -> nmsFunction.getAsBoolean());
     }
 
     static void save() {

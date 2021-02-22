@@ -1,10 +1,10 @@
 package net.civex4.nobilityitems;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import net.civex4.nobilityitems.impl.BlockManager;
 import net.civex4.nobilityitems.impl.UnobtainableBlocks;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
