@@ -32,12 +32,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
-import net.civex4.nobilityitems.impl.ModelPartitioner;
+import net.civex4.nobilityitems.impl.ModelPatcher;
 import net.civex4.nobilityitems.impl.UnobtainableBlocks;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.configuration.Configuration;
-import org.bukkit.configuration.file.YamlConfiguration;
 
 public class PackGenerator {
 
@@ -52,7 +50,6 @@ public class PackGenerator {
     private static Path blockModelFolder;
     private static Path blockTextureFolder;
     private static Path blockModelSourceFolder;
-    private static Configuration config;
 
     private static void generateStructure() throws IOException {
         Path dataFolder = NobilityItems.getInstance().getDataFolder().toPath();
@@ -309,29 +306,16 @@ public class PackGenerator {
 
         generateStructure();
 
-        InputStream texturesYml = NobilityItems.getInstance().getResource("textures.yml");
-        if (texturesYml == null) {
-            throw new IOException("Could not find textures.yml");
-        }
-        InputStreamReader reader = new InputStreamReader(texturesYml);
-        config = YamlConfiguration.loadConfiguration(reader);
-
         for (Material type : items.keySet()) {
-            if (!config.contains(type.name())) {
-                Bukkit.getLogger().severe("Cannot generate for type " + type.name() + "! try a different Material?");
+            String materialName = type.name().toLowerCase(Locale.ROOT);
+            Path file = itemModelFolder.resolve(materialName + ".json");
+
+            ItemModel toWrite = ModelPatcher.loadVanillaItemModel(materialName, NobilityItems.getInstance().getDataFolder());
+            if (toWrite == null) {
+                Bukkit.getLogger().severe("Cannot generate item model for type " + materialName + "! try a different Material?");
                 continue;
             }
 
-            String materialKey = type.name();
-
-            Path file = itemModelFolder.resolve(materialKey.toLowerCase() + ".json");
-
-            String parent = config.getString(materialKey + ".parent");
-
-            ItemModel toWrite = new ItemModel();
-            toWrite.parent = parent;
-            toWrite.textures = new ItemModel.Textures();
-            toWrite.textures.layer0 = config.getString(materialKey + ".layer0");
             toWrite.overrides = new ArrayList<>();
 
             for (NobilityItem item : items.get(type)) {
@@ -341,7 +325,7 @@ public class PackGenerator {
                     if (item.hasBlock()) {
                         itemModel.parent = "block/" + item.getInternalName();
                     } else {
-                        itemModel.parent = parent;
+                        itemModel.parent = toWrite.parent;
                         itemModel.textures = new ItemModel.Textures();
                         itemModel.textures.layer0 = "item/" + item.getModel();
                     }
@@ -416,7 +400,7 @@ public class PackGenerator {
 
                 Path generatedModelFile = blockModelFolder.resolve(block.getInternalName() + ".json");
                 if (model.nobility_transparent != null && model.nobility_transparent) {
-                    ModelPartitioner.partitionModel(blockModelFile, generatedModelFile, NobilityItems.getInstance().getDataFolder().toPath().resolve("pack"), NobilityItems.getInstance().getDataFolder());
+                    ModelPatcher.partitionBlockModel(blockModelFile, generatedModelFile, NobilityItems.getInstance().getDataFolder().toPath().resolve("pack"), NobilityItems.getInstance().getDataFolder());
                 } else {
                     Files.copy(blockModelFile, generatedModelFile);
                 }
@@ -427,7 +411,7 @@ public class PackGenerator {
     }
 
     @SuppressWarnings({"unused", "MismatchedQueryAndUpdateOfCollection"})
-    private static class ItemModel {
+    public static class ItemModel {
         private String parent;
         private Textures textures;
         private List<ModelOverride> overrides;

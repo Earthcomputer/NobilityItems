@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.logging.Level;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -182,7 +183,7 @@ class ItemManager {
                 String model = itemConfig.getString("model");
                 if (model != null) {
                     BiMap<String, Integer> modelData = customModelDatas.computeIfAbsent(material, k -> HashBiMap.create());
-                    int modelId = modelData.size();
+                    int modelId = modelData.size() + 1;
                     while (modelData.containsValue(modelId)) {
                         modelId++;
                     }
@@ -234,25 +235,49 @@ class ItemManager {
     static void save() {
         try {
             itemsConfig.save(file);
-
-            YamlConfiguration customModelDataConfig = new YamlConfiguration();
-            customModelDataConfig.options().header("This is a auto-generated file. Do not edit!");
-            for (Map.Entry<Material, BiMap<String, Integer>> materialData : customModelDatas.entrySet()) {
-                ConfigurationSection materialSection = customModelDataConfig.createSection(materialData.getKey().name().toLowerCase(Locale.ROOT));
-                for (Map.Entry<String, Integer> customModelData : materialData.getValue().entrySet()) {
-                    materialSection.set(customModelData.getKey(), customModelData.getValue());
-                }
-            }
-            customModelDataConfig.save(customModelDataFile);
+            saveCustomModelDataConfig();
         } catch (IOException e) {
             Bukkit.getLogger().severe("Unable to save config!");
             e.printStackTrace();
         }
     }
 
+    private static void saveCustomModelDataConfig() throws IOException {
+        YamlConfiguration customModelDataConfig = new YamlConfiguration();
+        customModelDataConfig.options().header("This is a auto-generated file. Do not edit!");
+        for (Map.Entry<Material, BiMap<String, Integer>> materialData : customModelDatas.entrySet()) {
+            ConfigurationSection materialSection = customModelDataConfig.createSection(materialData.getKey().name().toLowerCase(Locale.ROOT));
+            for (Map.Entry<String, Integer> customModelData : materialData.getValue().entrySet()) {
+                materialSection.set(customModelData.getKey(), customModelData.getValue());
+            }
+        }
+        customModelDataConfig.save(customModelDataFile);
+    }
+
     static int getModelData(Material material, String model) {
         Map<String, Integer> modelData = customModelDatas.get(material);
-        return modelData == null ? -1 : modelData.getOrDefault(model, -1);
+        return modelData == null ? 0 : modelData.getOrDefault(model, 0);
+    }
+
+    static int getOrCreateModelData(Material material, String model) {
+        int modelId = getModelData(material, model);
+
+        if (modelId == 0) {
+            BiMap<String, Integer> modelData = customModelDatas.computeIfAbsent(material, k -> HashBiMap.create());
+            modelId = modelData.size() + 1;
+            while (modelData.containsValue(modelId)) {
+                modelId++;
+            }
+            modelData.put(model, modelId);
+
+            try {
+                saveCustomModelDataConfig();
+            } catch (IOException e) {
+                Bukkit.getLogger().log(Level.SEVERE, "Failed to save model data config", e);
+            }
+        }
+
+        return modelId;
     }
 
     static List<NobilityItem> getItems() {

@@ -6,6 +6,7 @@ import com.google.common.io.CharStreams;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
+import net.civex4.nobilityitems.PackGenerator;
 import org.bukkit.Bukkit;
 
 import java.io.BufferedWriter;
@@ -32,10 +33,20 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-public class ModelPartitioner {
+public class ModelPatcher {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
-    public static void partitionModel(Path modelIn, Path modelOut, Path packDir, File dataFolder) throws IOException {
+    public static PackGenerator.ItemModel loadVanillaItemModel(String item, File dataFolder) throws IOException {
+        try (ZipFile clientJar = new ZipFile(downloadClient(new File(dataFolder, "client_cache")))) {
+            ZipEntry entry = clientJar.getEntry("assets/minecraft/models/item/" + item + ".json");
+            if (entry == null) {
+                return null;
+            }
+            return GSON.fromJson(new InputStreamReader(clientJar.getInputStream(entry), StandardCharsets.UTF_8), PackGenerator.ItemModel.class);
+        }
+    }
+
+    public static void partitionBlockModel(Path modelIn, Path modelOut, Path packDir, File dataFolder) throws IOException {
         try (ZipFile clientJar = new ZipFile(downloadClient(new File(dataFolder, "client_cache")))) {
             BlockModel model = GSON.fromJson(Files.newBufferedReader(modelIn), BlockModel.class);
             if (model.parent != null) {
@@ -303,8 +314,6 @@ public class ModelPartitioner {
             return null;
         }
 
-        Bukkit.getLogger().info("Downloading " + cacheDir + "/" + dest);
-
         File destFile = new File(cacheDir, dest);
         File etagFile = new File(cacheDir, dest + ".etag");
 
@@ -328,6 +337,8 @@ public class ModelPartitioner {
             long lastModified = connection.getHeaderFieldDate("Last-Modified", -1);
             if (!force && destFile.exists() && (responseCode == HttpURLConnection.HTTP_NOT_MODIFIED || lastModified > 0 && destFile.lastModified() >= lastModified))
                 return destFile;
+
+            Bukkit.getLogger().info("Downloading " + cacheDir + "/" + dest);
 
             destFile.getParentFile().mkdirs();
             try {

@@ -17,8 +17,8 @@ public class NobilityItem {
     private final String internalName;
     private final String displayName;
     private Material material;
-    private final String model;
-    private final int customModelData;
+    private String model;
+    private int customModelData;
     private final List<String> lore;
     private final boolean hasLore;
     private NobilityBlock block;
@@ -42,6 +42,10 @@ public class NobilityItem {
         } else {
             this.material = Material.STRUCTURE_VOID;
         }
+        if (this.model == null) {
+            this.model = this.internalName;
+        }
+        this.customModelData = ItemManager.getOrCreateModelData(material, model);
     }
 
     public boolean hasLore() {
@@ -97,7 +101,7 @@ public class NobilityItem {
         ItemMeta meta = NobilityItems.getInstance().getServer().getItemFactory().getItemMeta(material);
         assert meta != null;
         meta.setDisplayName(displayName);
-        if (customModelData > -1)
+        if (customModelData != 0)
             meta.setCustomModelData(customModelData);
         if (lore != null)
             meta.setLore(lore);
@@ -129,7 +133,7 @@ public class NobilityItem {
             return false;
         }
 
-        return customModelData < 0 || meta.getCustomModelData() == customModelData;
+        return customModelData == 0 || meta.getCustomModelData() == customModelData;
 
     }
 
